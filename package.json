@@ -6,7 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^5.5.0",
+    "@tensorflow/tfjs-node": "^4.14.0",
     "nsfwjs": "^2.4.0",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
