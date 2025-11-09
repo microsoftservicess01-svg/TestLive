@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: test-live-colorful
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_KEY
+        sync: false
