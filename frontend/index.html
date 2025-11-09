@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Test Live — Sunny Live</title>
+  <style>
+    :root{
+      --yellow:#FFD600; --orange:#FFA000; --bg:#FFFDF3; --card:#FFFFFF; --muted:#666;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:#111}
+    header{background:linear-gradient(90deg,var(--yellow),var(--orange));padding:18px;color:#000;font-weight:800;text-align:center;position:relative;box-shadow:0 3px 12px rgba(255,166,0,0.18)}
+    header .brand{font-size:20px}
+    .container{max-width:1100px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 6px 22px rgba(0,0,0,0.06)}
+    .controls{display:flex;gap:8px;margin-top:10px}
+    .btn{background:var(--yellow);border:none;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer;box-shadow:0 6px 14px rgba(255,198,0,0.15);transition:transform .15s,box-shadow .15s}
+    .btn:hover{transform:translateY(-2px)}
+    .btn-danger{background:#ff5252;color:#fff}
+    #publicChat{height:260px;overflow:auto;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.95));border:1px solid rgba(255,214,0,0.2)}
+    .msg{padding:8px 12px;border-radius:18px;display:inline-block;margin-bottom:8px;max-width:75%}
+    .msg.me{background:linear-gradient(90deg,#fff,#fff);border:1px solid rgba(0,0,0,0.04);float:right}
+    .msg.other{background:linear-gradient(90deg,rgba(255,246,210,1),rgba(255,238,170,1));border:1px solid rgba(255,214,0,0.12)}
+    .videoWrap{position:relative;border-radius:12px;overflow:hidden}
+    video{width:100%;height:auto;background:#000;display:block}
+    .liveBadge{position:absolute;top:12px;left:12px;background:rgba(255,0,0,0.95);color:#fff;padding:6px 8px;border-radius:20px;font-weight:800;display:flex;gap:8px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.2)}
+    .viewerCount{position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.9);padding:6px 8px;border-radius:12px;font-weight:700;color:#111;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+
+    /* pulsing ring for live button */
+    .goLiveWrap{position:relative;display:inline-block}
+    .pulse{position:absolute;inset:-6px;border-radius:50%;background:radial-gradient(circle, rgba(255,214,0,0.35), rgba(255,160,0,0));animation:pulse 1.6s infinite}
+    @keyframes pulse{0%{transform:scale(0.9);opacity:1}100%{transform:scale(1.6);opacity:0}}
+
+    /* responsive */
+    @media(max-width:860px){ .container{grid-template-columns:1fr} .viewerCount{display:none} }
+  </style>
+</head>
+<body>
+  <header><div class="brand">🌞 Test Live — Sunny Live</div></header>
+
+  <div class="container">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><h2 style="margin:0">Public Broadcast</h2><div id="status" class="small" style="color:var(--muted)">Not connected</div></div>
+        <div style="text-align:right">
+          <div id="liveIndicator" style="font-weight:800;color:var(--muted)">Visitor Mode</div>
+        </div>
+      </div>
+
+      <div id="publicChat" aria-live="polite"></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <input id="publicInput" placeholder="Say something..." style="flex:1;padding:10px;border-radius:10px;border:1px solid #eee">
+        <button id="sendBtn" class="btn">Send</button>
+      </div>
+
+      <div class="controls" style="margin-top:12px">
+        <div class="goLiveWrap">
+          <div id="pulse" class="pulse" style="display:none"></div>
+          <button id="goLiveBtn" class="btn">🎬 Go Live</button>
+        </div>
+        <button id="stopLiveBtn" class="btn btn-danger" style="display:none">⏹ Stop Live</button>
+      </div>
+
+      <div style="margin-top:12px" class="videoWrap card">
+        <div class="liveBadge" id="liveBadge" style="display:none"><span style="width:10px;height:10px;border-radius:50%;background:#fff;display:inline-block"></span> LIVE</div>
+        <div class="viewerCount" id="viewerCount" style="display:none">0 viewers</div>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay muted playsinline style="display:none;position:absolute;bottom:12px;right:12px;width:120px;border-radius:8px;border:3px solid rgba(255,255,255,0.6)"></video>
+      </div>
+    </div>
+
+    <div class="card" id="rightPanel">
+      <h3 style="margin-top:0">Create / Login</h3>
+      <div class="small">Access key (admin): <input id="accessKey" placeholder="admin key" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #eee" /></div>
+      <div style="margin-top:8px;"><input id="displayName" placeholder="display name (optional)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #eee" /></div>
+      <div style="margin-top:8px;"><input id="password" type="password" placeholder="choose a password" style="width:100%;padding:8px;border-radius:8px;border:1px solid #eee" /></div>
+      <div style="margin-top:8px;"><button id="signupBtn" class="btn" style="width:100%">Create account</button></div>
+
+      <hr style="margin:12px 0"/>
+
+      <div><input id="loginId" placeholder="Your ID" style="width:100%;padding:8px;border-radius:8px;border:1px solid #eee" /></div>
+      <div style="margin-top:8px;"><input id="loginPass" type="password" placeholder="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid #eee" /></div>
+      <div style="margin-top:8px;"><button id="loginBtn" class="btn" style="width:100%">Login</button></div>
+      <div id="me" class="small" style="margin-top:10px"></div>
+      <div style="margin-top:14px"><button id="refreshUsers" class="btn" style="width:100%">Refresh users</button></div>
+    </div>
+  </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const API_BASE = '';
+let socket, token=null, myId=null, pc=null, localStream=null, isLive=false;
+let viewers = 0;
+
+function setStatus(t){ document.getElementById('status').innerText = t; }
+function addMsg(txt, me=false){
+  const el = document.createElement('div'); el.className = 'msg '+(me?'me':'other'); el.innerText = txt;
+  const box = document.getElementById('publicChat'); box.appendChild(el); box.scrollTop = box.scrollHeight;
+}
+
+// auth
+document.getElementById('signupBtn').onclick = async ()=>{
+  const accessKey = document.getElementById('accessKey').value.trim();
+  const password = document.getElementById('password').value;
+  const displayName = document.getElementById('displayName').value.trim();
+  const r = await fetch('/api/signup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accessKey,password,displayName})});
+  const j = await r.json();
+  if (j.token){ token=j.token; myId=j.id; localStorage.setItem('token',token); localStorage.setItem('id',myId); afterLogin(); alert('Account created. Save your ID: '+myId); }
+  else alert(JSON.stringify(j));
+};
+
+document.getElementById('loginBtn').onclick = async ()=>{
+  const id = document.getElementById('loginId').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const r = await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,password})});
+  const j = await r.json();
+  if (j.token){ token=j.token; myId=j.id; localStorage.setItem('token',token); localStorage.setItem('id',myId); afterLogin(); }
+  else alert(JSON.stringify(j));
+};
+
+async function afterLogin(){
+  setStatus('Authenticated as '+(document.getElementById('displayName').value || myId));
+  document.getElementById('me').innerText = 'You: '+(document.getElementById('displayName').value || myId);
+  socket = io(API_BASE, { path:'/socket.io' });
+  socket.on('connect', ()=> socket.emit('auth', token));
+  socket.on('auth-ok', d=>{ setStatus('Socket OK'); if (d.displayName) document.getElementById('me').innerText = 'You: '+d.displayName; });
+  socket.on('public-message', m=> addMsg(m.from+': '+m.text, m.from===myId));
+  socket.on('live-started', d=>{ setStatus('Live: '+d.id); if (d.id!==myId) startViewer(d.id); document.getElementById('liveBadge').style.display='flex'; document.getElementById('viewerCount').style.display='block'; });
+  socket.on('live-stopped', ()=>{ setStatus('Live stopped'); stopViewer(); document.getElementById('liveBadge').style.display='none'; document.getElementById('viewerCount').style.display='none'; });
+  socket.on('warning', ({id,count})=>{ if (id===myId){ alert('⚠️ Warning '+count+'/3: Inappropriate content detected'); } });
+  socket.on('stop-live', ()=>{ if (isLive) stopLive(); });
+  socket.on('banned', ()=>{ alert('You are banned and cannot go live'); });
+  socket.on('public-signal', async (data)=>{
+    if (!pc) return;
+    if (data.sdp){ await pc.setRemoteDescription(new RTCSessionDescription(data.sdp)); if (data.sdp.type==='offer'){ const ans = await pc.createAnswer(); await pc.setLocalDescription(ans); socket.emit('public-signal',{ sdp: pc.localDescription }); } }
+    if (data.candidate){ try{ await pc.addIceCandidate(data.candidate); }catch(e){ console.warn(e); } }
+  });
+}
+
+document.getElementById('sendBtn').onclick = ()=>{ const t=document.getElementById('publicInput').value; if (!socket) return alert('login first'); addMsg('You: '+t,true); socket.emit('public-message', t); document.getElementById('publicInput').value=''; };
+document.getElementById('refreshUsers').onclick = async ()=>{ const r=await fetch('/api/users'); const j=await r.json(); alert('Users: '+ j.map(u=>u.id+'('+u.displayName+')').join(', ')); };
+
+// live controls
+document.getElementById('goLiveBtn').onclick = async ()=>{ if (!token) return alert('login first'); await startBroadcast(); socket.emit('go-live',{ id: myId }); document.getElementById('goLiveBtn').style.display='none'; document.getElementById('stopLiveBtn').style.display='inline-block'; document.getElementById('pulse').style.display='block'; document.getElementById('liveIndicator').innerText='Broadcaster'; };
+document.getElementById('stopLiveBtn').onclick = ()=>{ socket.emit('stop-live'); stopLive(); };
+
+async function startBroadcast(){
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    document.getElementById('localVideo').srcObject = localStream; document.getElementById('localVideo').style.display='block';
+    isLive = true;
+    pc = new RTCPeerConnection();
+    localStream.getTracks().forEach(t=>pc.addTrack(t, localStream));
+    pc.onicecandidate = e=>{ if (e.candidate) socket.emit('public-signal',{ candidate: e.candidate }); };
+    const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+    socket.emit('public-signal',{ sdp: pc.localDescription });
+
+    // moderation snapshots
+    window._modInt = setInterval(async ()=>{
+      try{
+        const canvas = document.createElement('canvas'); canvas.width=160; canvas.height=120;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(document.getElementById('localVideo'),0,0,160,120);
+        const frame = canvas.toDataURL('image/jpeg').split(',')[1];
+        await fetch('/api/moderate-frame',{ method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+token }, body: JSON.stringify({ frame }) });
+      }catch(e){ console.warn('mod err', e); }
+    },5000);
+  }catch(e){ alert('Camera permission or error: '+e.message); }
+}
+
+function stopLive(){
+  isLive=false; if (window._modInt) clearInterval(window._modInt); if (localStream) localStream.getTracks().forEach(t=>t.stop()); if (pc){ pc.close(); pc=null; } document.getElementById('localVideo').style.display='none'; document.getElementById('goLiveBtn').style.display='inline-block'; document.getElementById('stopLiveBtn').style.display='none'; document.getElementById('pulse').style.display='none'; document.getElementById('liveIndicator').innerText='Visitor Mode'; }
+
+async function startViewer(broadcasterId){
+  pc = new RTCPeerConnection();
+  pc.ontrack = e=>{ document.getElementById('remoteVideo').srcObject = e.streams[0]; };
+  pc.onicecandidate = e=>{ if (e.candidate) socket.emit('public-signal',{ candidate: e.candidate }); };
+  const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+  socket.emit('public-signal',{ sdp: pc.localDescription });
+}
+
+function stopViewer(){ if (pc){ pc.close(); pc=null; } document.getElementById('remoteVideo').srcObject=null; }
+
+window.addEventListener('load', ()=>{ const t=localStorage.getItem('token'); const id=localStorage.getItem('id'); if (t&&id){ token=t; myId=id; afterLogin(); } });
+</script>
+</body>
+</html>
